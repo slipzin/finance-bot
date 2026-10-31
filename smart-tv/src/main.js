@@ -18,6 +18,7 @@ const { findBinary, startService, stopService } = require('./services');
 const { startDial } = require('./dial');
 const { Store } = require('./store');
 const { resolveLink } = require('./links');
+const network = require('./network');
 
 const WINDOWED = process.argv.includes('--windowed');
 const ROOT = path.join(__dirname, '..');
@@ -129,6 +130,7 @@ function launch(id, url) {
   if (!appDef) return;
   if (appDef.type === 'airplay') return send('show-airplay', systemInfo());
   if (appDef.type === 'store') return send('show-store');
+  if (appDef.type === 'settings') return send('show-settings');
   if (current && current !== id) goHome();
   if (appDef.type === 'flatpak') return launchNative(appDef);
   launchWeb(appDef, url);
@@ -324,7 +326,11 @@ function uninstall(id) {
   store.uninstall(id);
 }
 
-ipcMain.handle('system:info', () => systemInfo());
+ipcMain.handle('system:info', () => ({
+  ...systemInfo(), version: app.getVersion(), addresses: network.addresses(), live: fs.existsSync('/run/live/medium'),
+}));
+ipcMain.handle('wifi:list', () => network.listWifi().catch((err) => ({ error: err.message })));
+ipcMain.handle('wifi:connect', (_e, { ssid, password }) => network.connectWifi(String(ssid), password ? String(password) : ''));
 ipcMain.handle('apps:list', () => store.installed().map(forUi));
 ipcMain.handle('store:list', () => store.listing().map(forUi));
 ipcMain.on('apps:launch', (_e, id) => launch(id));

@@ -1,0 +1,33 @@
+# Base
+live-boot live-config live-config-systemd user-setup sudo locales tzdata
+systemd-sysv dbus-user-session polkitd ca-certificates curl
+
+# Vídeo (X11 mínimo + drivers e decodificação por hardware)
+xserver-xorg-core xserver-xorg-video-all xserver-xorg-input-all xserver-xorg-legacy
+xinit xauth x11-xserver-utils matchbox-window-manager xdotool
+libgl1-mesa-dri libegl1 libgl1 fontconfig
+mesa-va-drivers mesa-vulkan-drivers intel-media-va-driver-non-free i965-va-driver va-driver-all
+
+# Bibliotecas do Electron/Chromium
+libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 libgbm1 libasound2
+libxss1 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libpango-1.0-0 libcairo2 libnotify4 libsecret-1-0
+
+# Som e Bluetooth (AirPods, controles)
+pipewire pipewire-pulse pipewire-alsa wireplumber pulseaudio-utils bluez
+
+# Rede
+network-manager wpasupplicant avahi-daemon libnss-mdns
+
+# AirPlay
+uxplay gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
+gstreamer1.0-libav gstreamer1.0-vaapi gstreamer1.0-gl gstreamer1.0-x gstreamer1.0-alsa
+
+# Loja de apps nativos
+flatpak
+
+# Firmware (Wi-Fi, placas de vídeo e som mais comuns)
+firmware-linux-free firmware-misc-nonfree firmware-realtek firmware-iwlwifi firmware-atheros
+firmware-amd-graphics firmware-sof-signed firmware-brcm80211 intel-microcode amd64-microcode
+
+# Fontes
+fonts-noto-core fonts-noto-color-emoji

@@ -1,50 +1,48 @@
 # Instalação: do pendrive de teste ao dual boot com Windows
 
-Sistema base recomendado: **Ubuntu 24.04 LTS** (Desktop, "instalação mínima").
-Ele já vem com drivers de vídeo/Wi-Fi e Secure Boot funcionando. O instalador da Smart TV
-coloca por cima só o necessário e, no modo TV, desliga a área de trabalho.
+- **Fase 1 (teste):** imagem leve que dá boot direto na TV pelo pendrive. Nada é instalado.
+- **Fase 2 (definitivo):** Ubuntu 24.04 LTS instalado ao lado do Windows, com o instalador da
+  Smart TV por cima (drivers, Secure Boot e atualizações do Ubuntu).
 
 ---
 
-## Fase 1: testar no pendrive
+## Fase 1: pendrive de teste (imagem leve, boot direto na TV)
 
-Você precisa de **dois pendrives**: um de 8 GB para o instalador do Ubuntu e outro de
-**32 GB ou mais (de preferência USB 3)** onde o sistema de teste vai ficar instalado.
-Uma instalação completa no pendrive é muito mais estável que um "live USB com persistência".
+Uma imagem própria da Smart TV (Debian 12 mínimo, sem área de trabalho, cerca de 1 a 1,5 GB).
+Você grava no pendrive, dá boot e ela abre direto no launcher. **Nada é instalado no PC**
+e o disco do Windows não é tocado.
 
-1. Baixe o Ubuntu 24.04 Desktop em ubuntu.com e grave no pendrive de 8 GB com o
-   [balenaEtcher](https://etcher.balena.io) ou o Rufus.
-2. Conecte **os dois pendrives**, reinicie o PC e abra o menu de boot
-   (F12, F11, F8 ou Esc, dependendo da placa-mãe). Escolha o pendrive do instalador.
-3. No instalador: **Instalação interativa → Instalação padrão (mínima)**.
-4. Em "Tipo de instalação", escolha **Instalação manual** e selecione **o pendrive de 32 GB**
-   (confira pelo tamanho!). Crie uma partição `ext4` montada em `/` e, se o PC for UEFI,
-   uma partição `EFI` de 512 MB **no próprio pendrive**.
-   Em "Dispositivo para o carregador de inicialização", escolha **o pendrive de 32 GB**,
-   assim o disco do Windows não é tocado.
-5. Termine a instalação, remova o pendrive do instalador e dê boot pelo pendrive de 32 GB.
-6. Abra o Terminal e instale a Smart TV:
+1. **Baixe a imagem:** em [Releases](https://github.com/slipzin/finance-bot/releases), pegue o
+   `smart-tv-live-amd64.iso` mais recente. Ela é gerada automaticamente pelo GitHub a cada
+   atualização do código (workflow *Smart TV - imagem do pendrive*).
+2. **Grave no pendrive** (4 GB ou mais) com o [balenaEtcher](https://etcher.balena.io) ou o
+   [Rufus](https://rufus.ie). No Rufus, quando ele perguntar, escolha **modo DD**.
+3. **Dê boot pelo pendrive:** reinicie e abra o menu de boot (F12, F11, F8 ou Esc, dependendo
+   da placa-mãe). Se não aparecer, desative o *Secure Boot* na BIOS só para o teste.
+4. A TV abre sozinha. Sem cabo de rede, vá em **Configurações** (bloco ⚙) → Wi-Fi.
 
-   ```bash
-   sudo apt install -y git
-   git clone -b claude/smart-tv-native-app-d4pzo8 https://github.com/slipzin/finance-bot.git
-   cd finance-bot/smart-tv
-   ./scripts/install-linux.sh          # modo teste: abre ao entrar na área de trabalho
-   ```
+### Guardar logins e apps entre um boot e outro (opcional)
 
-7. Quando tudo estiver bom, ative o modo TV (liga direto na TV, sem desktop):
+Sem isso, a imagem começa "zerada" a cada boot (bom para testar, mas você precisa entrar nas
+contas de novo). Para guardar:
 
-   ```bash
-   ./scripts/install-linux.sh --kiosk
-   sudo reboot
-   ```
+- **Com Ventoy (mais fácil, funciona no Windows):** instale o [Ventoy](https://www.ventoy.net)
+  no pendrive, copie o `.iso` para ele e crie um arquivo de persistência com rótulo
+  `persistence` e um `persistence.conf` contendo `/ union`, seguindo o
+  [plugin de persistência do Ventoy](https://www.ventoy.net/en/plugin_persistence.html).
+- **Com Etcher/Rufus:** depois de gravar, crie no espaço livre do pendrive uma partição
+  `ext4` com rótulo `persistence` e, dentro dela, um arquivo `persistence.conf` com `/ union`.
 
-Para atualizar depois: `cd finance-bot && git pull && cd smart-tv && ./scripts/install-linux.sh --kiosk`.
+A imagem já liga com a opção `persistence`, então ela usa essa partição/arquivo se existir.
 
-> Se o menu de boot do pendrive mostrar o **Windows** (o instalador detecta o disco interno),
-> o botão **Windows** já aparece no menu de energia da TV, mesmo no teste.
+### Teclado e outros ajustes de boot
 
----
+No menu do pendrive, aperte `Tab` (ou `e`) e adicione ao fim da linha, por exemplo,
+`keyboard-layouts=br` (teclado ABNT2) ou `timezone=Europe/Lisbon`.
+
+### Atualizar
+
+Baixe a imagem mais nova e grave de novo (com Ventoy, basta trocar o arquivo `.iso`).
 
 ## Fase 2: instalação definitiva com dual boot
 
@@ -66,7 +64,17 @@ Para atualizar depois: `cd finance-bot && git pull && cd smart-tv && ./scripts/i
    não alocado e mantém o Windows intacto.
    (Se preferir controle total: "Instalação manual" → use o espaço livre para uma partição
    `ext4` em `/` e reaproveite a partição EFI existente, **sem formatá-la**.)
-3. Depois de instalar, rode os mesmos comandos do passo 6 da Fase 1, já com `--kiosk`.
+3. Depois de instalar, abra o Terminal e rode:
+
+   ```bash
+   sudo apt install -y git
+   git clone -b claude/smart-tv-native-app-d4pzo8 https://github.com/slipzin/finance-bot.git
+   cd finance-bot/smart-tv
+   ./scripts/install-linux.sh --kiosk
+   sudo reboot
+   ```
+
+   Para atualizar depois: `cd ~/finance-bot && git pull && cd smart-tv && ./scripts/install-linux.sh --kiosk`.
 
 ### Como fica
 
@@ -84,4 +92,6 @@ Para atualizar depois: `cd finance-bot && git pull && cd smart-tv && ./scripts/i
   `sudo systemctl set-default graphical.target && sudo rm /etc/systemd/system/getty@tty1.service.d/autologin.conf && sudo reboot`.
 - **"Sair" no menu da TV** vai para o terminal; `rm /tmp/smart-tv-stop && startx` volta para a TV
   (ou simplesmente reinicie).
+- **Pendrive não liga direto na TV:** no menu do pendrive escolha a primeira opção; se a tela
+  ficar preta, tente a opção *failsafe* e me mande uma foto da tela.
 - **Windows sumiu do menu de boot:** rode `sudo update-grub` e depois `./scripts/install-linux.sh --kiosk`.

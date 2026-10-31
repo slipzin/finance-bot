@@ -22,6 +22,12 @@ class Store {
       this.state = { installed: catalog.filter((a) => a.default).map((a) => a.id), custom: [] };
       this.save();
     }
+    // Blocos de sistema adicionados em atualizações entram automaticamente.
+    const missing = catalog.filter((a) => a.system && a.default && !this.state.installed.includes(a.id));
+    if (missing.length) {
+      this.state.installed.push(...missing.map((a) => a.id));
+      this.save();
+    }
   }
 
   save() {
@@ -76,6 +82,15 @@ class Store {
     });
   }
 
+  // No pendrive (imagem live) o usuário é criado no boot, então o Flathub é adicionado aqui.
+  ensureFlathub() {
+    return new Promise((resolve, reject) => {
+      execFile('flatpak', ['remote-add', '--user', '--if-not-exists', 'flathub',
+        'https://dl.flathub.org/repo/flathub.flatpakrepo'], (err, _out, stderr) =>
+        (err ? reject(new Error(stderr || err.message)) : resolve()));
+    });
+  }
+
   async install(id) {
     const app = this.get(id);
     if (!app || this.isInstalled(id) || this.status[id]) return;
@@ -83,6 +98,7 @@ class Store {
       if (!this.flatpak) return;
       this.setStatus(id, 'installing');
       try {
+        await this.ensureFlathub();
         await this.flatpakCmd(['install', 'flathub', app.flatpak]);
       } catch (err) {
         console.error(`Falha ao instalar ${app.name}:`, err.message);

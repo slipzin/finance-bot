@@ -88,3 +88,18 @@ header { z-index: 1; position: fixed; top: 3vh; right: 4vw; display: flex; gap: 
 #toast[hidden] { display: none; }
 
 #grid, #store-grid { transition: transform 220ms ease; }
+
+#settings { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(12px); }
+#settings[hidden] { display: none; }
+#settings .panel { width: 70vw; padding: 3vw; border-radius: 1.5vw; background: rgba(30,30,35,.95); font-size: 1.2vw; }
+#settings h2 { font-size: 2.6vw; margin-bottom: 1.5vw; }
+#settings h3 { font-size: 1.1vw; text-transform: uppercase; letter-spacing: .05em; opacity: .6; margin-bottom: 1vw; }
+#settings .cols { display: grid; grid-template-columns: 3fr 2fr; gap: 3vw; margin-bottom: 1.5vw; }
+#settings .muted { opacity: .65; font-size: 1vw; margin-top: .8vw; }
+#wifi-list { display: grid; gap: .4vw; max-height: 45vh; overflow: hidden; }
+.wifi { display: flex; justify-content: space-between; padding: .7vw 1vw; border-radius: .6vw; background: rgba(255,255,255,.06); }
+.wifi.focused { background: #fff; color: #111; }
+.wifi .sig { opacity: .7; }
+#wifi-input { width: 100%; font: inherit; font-size: 1.4vw; padding: .7vw 1vw; border-radius: .6vw; border: 0; margin-top: .6vw; }
+#sys-info { list-style: none; display: grid; gap: .6vw; font-size: 1.05vw; word-break: break-all; }

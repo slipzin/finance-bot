@@ -16,7 +16,7 @@ function makeStore() {
 test('vem com os apps padrão, sistema no fim', () => {
   const { store } = makeStore();
   const ids = store.installed().map((a) => a.id);
-  assert.deepStrictEqual(ids.slice(-2), ['airplay', 'store']);
+  assert.deepStrictEqual(ids.slice(-3), ['airplay', 'store', 'settings']);
   assert.ok(ids.includes('netflix') && !ids.includes('hbomax'));
 });
 
@@ -24,7 +24,7 @@ test('instala e remove app web e persiste', async () => {
   const { store, file, changes } = makeStore();
   await store.install('hbomax');
   assert.ok(store.isInstalled('hbomax'));
-  assert.strictEqual(store.installed().at(-3).id, 'hbomax');
+  assert.strictEqual(store.installed().at(-4).id, 'hbomax');
   assert.ok(JSON.parse(fs.readFileSync(file, 'utf8')).installed.includes('hbomax'));
   await store.uninstall('hbomax');
   assert.ok(!store.isInstalled('hbomax'));
@@ -53,4 +53,12 @@ test('apps nativos somem da loja sem flatpak', () => {
   assert.ok(!store.listing().some((a) => a.type === 'flatpak'));
   store.flatpak = true;
   assert.ok(store.listing().some((a) => a.id === 'kodi'));
+});
+
+test('blocos de sistema novos aparecem para quem já tinha a TV instalada', () => {
+  const { store, file } = makeStore();
+  fs.writeFileSync(file, JSON.stringify({ installed: ['netflix', 'store'], custom: [] }));
+  const again = new Store({ catalog, file, onChange() {} });
+  assert.ok(again.isInstalled('settings') && again.isInstalled('airplay'));
+  assert.ok(store);
 });

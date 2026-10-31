@@ -10,7 +10,7 @@ const recent = JSON.parse(localStorage.getItem('recent') || '[]');
 let apps = [];
 let catalog = [];
 let index = Number(localStorage.getItem('lastIndex') || 0);
-let zone = 'grid'; // 'grid' | 'power' | 'store'
+let zone = 'grid'; // 'grid' | 'power' | 'store' | 'settings'
 let powerIndex = 0;
 let storeIndex = 0;
 let confirmRemove = null; // { id, until }
@@ -203,6 +203,131 @@ function storeAction() {
   }
 }
 
+// ---------- Configurações (Wi-Fi) ----------
+
+const settingsEl = document.getElementById('settings');
+const wifiPass = document.getElementById('wifi-pass');
+const wifiInput = document.getElementById('wifi-input');
+const wifiMsg = document.getElementById('wifi-msg');
+let wifi = [];       // [{ ssid, signal, secure, connected }], item 0 = "procurar"
+let wifiIndex = 0;
+let wifiTarget = null;
+
+function signalBars(n) { return n > 75 ? '▂▄▆█' : n > 50 ? '▂▄▆' : n > 25 ? '▂▄' : '▂'; }
+
+function renderWifi() {
+  const box = document.getElementById('wifi-list');
+  box.innerHTML = '';
+  const items = [{ label: '↻ Procurar redes' }, ...wifi.map((n) => ({
+    label: `${n.connected ? '✓ ' : ''}${n.ssid}`, sig: `${n.secure ? '🔒 ' : ''}${signalBars(n.signal)}`,
+  }))];
+  wifiIndex = Math.max(0, Math.min(wifiIndex, items.length - 1));
+  items.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = `wifi${i === wifiIndex ? ' focused' : ''}`;
+    const name = document.createElement('span');
+    name.textContent = item.label;
+    const sig = document.createElement('span');
+    sig.className = 'sig';
+    sig.textContent = item.sig || '';
+    row.append(name, sig);
+    box.append(row);
+  });
+  box.children[wifiIndex]?.scrollIntoView({ block: 'nearest' });
+}
+
+async function scanWifi() {
+  wifiMsg.textContent = 'Procurando redes…';
+  const result = await window.tv.wifiList();
+  if (result.error) {
+    wifi = [];
+    wifiMsg.textContent = 'Wi-Fi indisponível neste aparelho (use cabo de rede).';
+  } else {
+    wifi = result;
+    wifiMsg.textContent = wifi.length ? '' : 'Nenhuma rede encontrada.';
+  }
+  renderWifi();
+}
+
+async function connectTo(net, password) {
+  wifiMsg.textContent = `Conectando em ${net.ssid}…`;
+  const res = await window.tv.wifiConnect(net.ssid, password);
+  wifiMsg.textContent = res.ok ? `Conectado em ${net.ssid}` : `Não conectou: ${res.error}`;
+  if (res.ok) { renderInfo(); scanWifi(); }
+}
+
+async function renderInfo() {
+  const info = await window.tv.info();
+  const rows = [
+    `Nome: ${info.deviceName}`,
+    ...(info.addresses.length ? info.addresses : ['Sem rede']),
+    `Controle pelo iPhone: ${info.remoteUrl || '—'}`,
+    `AirPlay: ${info.airplay ? 'ativo' : 'não instalado'}`,
+    `Spotify Connect: ${info.spotifyConnect ? 'ativo' : 'não instalado'}`,
+    `Versão ${info.version}${info.live ? ' · rodando do pendrive' : ''}`,
+  ];
+  const ul = document.getElementById('sys-info');
+  ul.innerHTML = '';
+  for (const text of rows) {
+    const li = document.createElement('li');
+    li.textContent = text;
+    ul.append(li);
+  }
+}
+
+function openSettings() {
+  zone = 'settings';
+  settingsEl.hidden = false;
+  wifiPass.hidden = true;
+  wifiIndex = 0;
+  renderWifi();
+  renderInfo();
+  scanWifi();
+}
+
+function closeSettings() {
+  settingsEl.hidden = true;
+  wifiTarget = null;
+  zone = 'grid';
+  update();
+}
+
+function settingsKey(e) {
+  const key = e.key;
+  if (wifiTarget) {
+    // Digitando a senha: só Enter e Esc são nossos, o resto vai para o campo.
+    if (key === 'Enter') {
+      const net = wifiTarget;
+      wifiTarget = null;
+      wifiPass.hidden = true;
+      connectTo(net, wifiInput.value);
+      wifiInput.value = '';
+    } else if (key === 'Escape') {
+      wifiTarget = null;
+      wifiPass.hidden = true;
+      wifiInput.value = '';
+    } else return;
+    e.preventDefault();
+    return;
+  }
+  if (key === 'ArrowUp') wifiIndex -= 1;
+  else if (key === 'ArrowDown') wifiIndex += 1;
+  else if (key === 'Enter' || key === ' ') {
+    if (wifiIndex === 0) return scanWifi();
+    const net = wifi[wifiIndex - 1];
+    if (!net || net.connected) return;
+    if (net.secure) {
+      wifiTarget = net;
+      document.getElementById('wifi-ssid').textContent = net.ssid;
+      wifiPass.hidden = false;
+      wifiInput.focus();
+    } else connectTo(net, '');
+  } else if (['Escape', 'Backspace', 'BrowserBack'].includes(key)) return closeSettings();
+  else return;
+  e.preventDefault();
+  renderWifi();
+}
+
 // ---------- Teclado / controle ----------
 
 function closeOverlay() { overlay.hidden = true; }
@@ -213,6 +338,7 @@ document.addEventListener('keydown', (e) => {
   const isBack = ['Escape', 'Backspace', 'BrowserBack'].includes(key);
   const isOk = key === 'Enter' || key === ' ';
 
+  if (zone === 'settings') return settingsKey(e);
   if (!overlay.hidden) {
     if (isOk || isBack) closeOverlay();
   } else if (zone === 'store') {
@@ -270,6 +396,7 @@ window.tv.onAppsChanged(async () => {
 });
 
 window.tv.onShowStore(openStore);
+window.tv.onShowSettings(openSettings);
 
 window.tv.onShowAirPlay((info) => {
   document.getElementById('airplay-name').textContent = info.deviceName;
@@ -279,6 +406,7 @@ window.tv.onShowAirPlay((info) => {
 
 window.tv.onRemoteBack(() => {
   if (!overlay.hidden) closeOverlay();
+  else if (zone === 'settings') { if (!wifiTarget) closeSettings(); }
   else if (zone === 'store') closeStore();
   else if (zone === 'power') { zone = 'grid'; update(); }
 });

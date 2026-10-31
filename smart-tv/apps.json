@@ -204,6 +204,19 @@
       "glyph": "+"
     },
     {
+      "id": "settings",
+      "type": "settings",
+      "system": true,
+      "default": true,
+      "name": "Configurações",
+      "subtitle": "Wi-Fi, rede e informações da TV",
+      "category": "Sistema",
+      "color": "#48484a",
+      "fg": "#ffffff",
+      "accent": "#3a3a3c",
+      "glyph": "⚙"
+    },
+    {
       "type": "web",
       "userAgent": "desktop",
       "id": "hbomax",

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Ajustes finais dentro da imagem.
+set -e
+chown -R root:root /opt/smart-tv
+# Sandbox do Chromium.
+chmod 4755 /opt/smart-tv/node_modules/electron/dist/chrome-sandbox
+# Boot mais rápido: não espera a rede para mostrar a TV.
+systemctl disable NetworkManager-wait-online.service 2>/dev/null || true
+systemctl enable NetworkManager avahi-daemon bluetooth 2>/dev/null || true
+# A TV roda o librespot ela mesma (no áudio do usuário).
+systemctl disable raspotify.service 2>/dev/null || true
+# Xorg iniciado pelo usuário do console.
+printf 'allowed_users=console\nneeds_root_rights=auto\n' > /etc/X11/Xwrapper.config
+# Usuário do pendrive pode usar Wi-Fi, Bluetooth e desligar sem senha.
+mkdir -p /etc/polkit-1/rules.d
+cat > /etc/polkit-1/rules.d/50-smart-tv.rules <<'RULES'
+polkit.addRule(function (action, subject) {
+  if (subject.user == "tv" && (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 ||
+      action.id.indexOf("org.freedesktop.login1.") == 0 || action.id.indexOf("org.bluez") == 0)) {
+    return polkit.Result.YES;
+  }
+});
+RULES

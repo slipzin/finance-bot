@@ -1,0 +1,57 @@
+name: Smart TV - imagem do pendrive
+
+on:
+  push:
+    branches: [main, claude/smart-tv-native-app-d4pzo8]
+    paths: ['smart-tv/**', '.github/workflows/smart-tv-live.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: smart-tv-live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container:
+      image: debian:bookworm
+      options: --privileged
+    steps:
+      - name: Ferramentas
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends live-build git rsync curl ca-certificates nodejs npm xz-utils
+      - uses: actions/checkout@v4
+      - name: Testes
+        working-directory: smart-tv
+        run: node --test
+      - name: Gerar imagem
+        working-directory: smart-tv
+        run: ./live/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smart-tv-live
+          path: smart-tv/dist/smart-tv-live-amd64.iso
+          compression-level: 0
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: smart-tv-live
+          path: dist
+      - name: Publicar para download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="smart-tv-live-${{ github.run_number }}"
+          gh release create "$tag" dist/smart-tv-live-amd64.iso \
+            --repo "${{ github.repository }}" --target "${{ github.sha }}" --prerelease \
+            --title "Smart TV para pendrive #${{ github.run_number }}" \
+            --notes "Imagem de teste da Smart TV. Grave no pendrive com o balenaEtcher, Rufus (modo DD) ou Ventoy e dê boot. Guia: smart-tv/docs/INSTALACAO.md"

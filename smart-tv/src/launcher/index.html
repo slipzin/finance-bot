@@ -44,6 +44,28 @@
     </div>
     <div id="store-wrap"><div id="store-grid"></div></div>
   </div>
+  <div id="settings" hidden>
+    <div class="panel wide">
+      <h2>Configurações</h2>
+      <div class="cols">
+        <section>
+          <h3>Wi-Fi</h3>
+          <div id="wifi-list"></div>
+          <div id="wifi-pass" hidden>
+            <p>Senha de <b id="wifi-ssid"></b></p>
+            <input id="wifi-input" type="password" autocomplete="off">
+            <p class="muted">Enter conecta · Esc cancela</p>
+          </div>
+          <p id="wifi-msg" class="muted"></p>
+        </section>
+        <section>
+          <h3>Esta TV</h3>
+          <ul id="sys-info"></ul>
+        </section>
+      </div>
+      <p class="muted">↑ ↓ escolher · OK conectar · Voltar fecha</p>
+    </div>
+  </div>
   <div id="toast" hidden></div>
   <div id="remote-hint"></div>
   <div id="hint">← ↑ → ↓ navegar · OK abrir · Home volta ao início</div>

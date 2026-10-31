@@ -6,15 +6,13 @@ tela cheia** (sem navegador), tem **loja de aplicativos** (web e nativos), **Air
 
 ![Launcher](docs/launcher-youtube.png)
 
-**Base recomendada:** Ubuntu 24.04 + este launcher em modo kiosk. Guia completo, do pendrive de
-teste ao dual boot com Windows: **[docs/INSTALACAO.md](docs/INSTALACAO.md)**.
+**Testar no pendrive:** baixe o `smart-tv-live-amd64.iso` em
+[Releases](https://github.com/slipzin/finance-bot/releases), grave com o balenaEtcher/Rufus e dê boot:
+liga direto na TV, sem instalar nada (imagem gerada por `live/build.sh` no GitHub Actions).
 
-```bash
-git clone -b claude/smart-tv-native-app-d4pzo8 https://github.com/slipzin/finance-bot.git
-cd finance-bot/smart-tv
-./scripts/install-linux.sh           # teste (abre junto com a área de trabalho)
-./scripts/install-linux.sh --kiosk   # modo TV (liga direto na TV)
-```
+**Instalação definitiva (dual boot com Windows):** Ubuntu 24.04 + `./scripts/install-linux.sh --kiosk`.
+
+Guia completo: **[docs/INSTALACAO.md](docs/INSTALACAO.md)**.
 
 ## Loja de aplicativos
 
@@ -69,6 +67,7 @@ Só funciona na mesma rede Wi-Fi e exige o PIN mostrado na TV (fica salvo).
 | Esc / Voltar | Volta uma tela no app (no início do app, volta para a Home) |
 | Home, tecla Windows ou Ctrl+H | Volta para o launcher (Home funciona também nos apps nativos) |
 | ↑ na primeira fileira | Menu **Windows** (reinicia no Windows) / Reiniciar / Desligar / Sair |
+| Bloco ⚙ Configurações | Wi-Fi, endereço da TV, status do AirPlay/Spotify Connect |
 
 Spotify, Apple Music, Deezer etc. continuam tocando ao voltar para a Home (ponto verde no bloco).
 
@@ -81,9 +80,9 @@ npm start        # tela cheia
 npm test         # testes (links, loja, DIAL, controle remoto)
 ```
 
-Estrutura: `src/main.js` (janelas, apps, serviços), `src/store.js` (loja/Flatpak),
+Estrutura: `src/main.js` (janelas, apps, serviços), `src/network.js` (Wi-Fi), `src/store.js` (loja/Flatpak),
 `src/links.js` (Enviar para TV), `src/dial.js` (YouTube DIAL), `src/remote-server.js` +
-`src/remote/` (controle do iPhone), `src/services.js` (UxPlay/librespot), `src/launcher/` (interface).
+`src/remote/` (controle do iPhone), `src/services.js` (UxPlay/librespot), `src/launcher/` (interface), `live/` (imagem do pendrive).
 
 ## Limitações
 
