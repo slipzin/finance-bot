@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+  <title>Smart TV</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="bg"></div>
+  <header>
+    <div id="clock"></div>
+    <nav id="power" aria-label="Energia">
+      <button data-action="reboot">Reiniciar</button>
+      <button data-action="shutdown">Desligar</button>
+      <button data-action="quit">Sair</button>
+    </nav>
+  </header>
+  <section id="hero">
+    <div id="hero-icon" class="tile-art"></div>
+    <h1 id="hero-title"></h1>
+    <p id="hero-subtitle"></p>
+    <div id="hero-chips"></div>
+  </section>
+  <main id="grid"></main>
+  <div id="hint">← ↑ → ↓ navegar · OK abrir · Home volta ao início</div>
+  <script src="launcher.js"></script>
+</body>
+</html>
