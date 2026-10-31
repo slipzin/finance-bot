@@ -23,8 +23,12 @@ jobs:
       - name: Ferramentas
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends live-build git rsync curl ca-certificates nodejs npm xz-utils
+          apt-get install -y --no-install-recommends live-build git rsync curl ca-certificates xz-utils
       - uses: actions/checkout@v4
+      # O Electron atual exige Node 22.12+ (o do Debian é o 18).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Testes
         working-directory: smart-tv
         run: node --test

@@ -27,7 +27,7 @@ step() { printf '\n\033[1;35m==> %s\033[0m\n' "$*"; }
 step "Pacotes do sistema"
 sudo apt-get update
 sudo apt-get install -y \
-  curl ca-certificates rsync nodejs npm \
+  curl ca-certificates rsync \
   xserver-xorg xinit x11-xserver-utils matchbox-window-manager xdotool \
   pipewire pipewire-pulse pipewire-alsa wireplumber pulseaudio-utils bluez \
   flatpak \
@@ -35,6 +35,13 @@ sudo apt-get install -y \
   gstreamer1.0-libav gstreamer1.0-vaapi gstreamer1.0-gl \
   fonts-noto-core fonts-noto-color-emoji
 sudo systemctl enable --now avahi-daemon bluetooth || true
+
+step "Node.js 22 (o Electron atual não funciona com o Node 18 do Ubuntu)"
+if ! command -v node >/dev/null || ! node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 12) ? 0 : 1)'; then
+  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+fi
+node -v
 
 step "Copiando o app para $APP_DIR"
 sudo mkdir -p "$APP_DIR"

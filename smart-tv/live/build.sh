@@ -3,7 +3,7 @@
 # que liga direto no launcher. Resultado: dist/smart-tv-live-amd64.iso
 #
 # Uso: em Debian 12 (ou no container debian:bookworm --privileged), como root:
-#   apt-get install -y live-build git rsync curl ca-certificates nodejs npm
+#   apt-get install -y live-build git rsync curl ca-certificates   (+ Node.js 22.12 ou mais novo)
 #   ./live/build.sh
 # O GitHub Actions (.github/workflows/smart-tv-live.yml) faz isso sozinho a cada mudança.
 set -euo pipefail
@@ -14,6 +14,8 @@ WORK="${WORK:-/tmp/smart-tv-live}"
 OUT="${OUT:-$APP/dist}"
 
 [ "$(id -u)" -eq 0 ] || { echo "Rode como root." >&2; exit 1; }
+node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 12) ? 0 : 1)' \
+  || { echo "Precisa do Node.js 22.12 ou mais novo (atual: $(node -v))." >&2; exit 1; }
 rm -rf "$WORK"
 mkdir -p "$WORK" "$OUT"
 cd "$WORK"
