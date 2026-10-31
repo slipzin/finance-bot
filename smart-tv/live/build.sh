@@ -42,7 +42,13 @@ node -e '
   const fs = require("fs"); const f = process.argv[1]; const p = JSON.parse(fs.readFileSync(f));
   p.dependencies = { electron: p.devDependencies.electron }; delete p.devDependencies; delete p.build;
   fs.writeFileSync(f, JSON.stringify(p, null, 2));' "$WORK/$STAGE/package.json"
-(cd "$STAGE" && npm install --omit=dev --no-audit --no-fund && rm -f package-lock.json)
+(cd "$STAGE" && npm install --omit=dev --no-audit --no-fund --foreground-scripts && rm -f package-lock.json)
+# O npm às vezes não roda o download do binário em dependências do GitHub: força e confere.
+if [ ! -x "$STAGE/node_modules/electron/dist/electron" ]; then
+  (cd "$STAGE/node_modules/electron" && node install.js)
+fi
+[ -x "$STAGE/node_modules/electron/dist/electron" ] || { echo "Electron não foi baixado." >&2; exit 1; }
+ls -la "$STAGE/node_modules/electron/dist" | head
 
 # Usuário "tv" (criado pelo live-config no boot) entra sozinho e abre a TV.
 mkdir -p config/includes.chroot/etc/skel config/includes.chroot/etc/systemd/system/getty@tty1.service.d
