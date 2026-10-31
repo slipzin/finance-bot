@@ -5,8 +5,11 @@
 
 const { app, BrowserWindow, WebContentsView, ipcMain, session, components } = require('electron');
 const { execFile } = require('child_process');
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
+const { startRemoteServer } = require('./remote-server');
+const { startAirPlay, stopAirPlay } = require('./airplay');
 
 const WINDOWED = process.argv.includes('--windowed');
 const ROOT = path.join(__dirname, '..');
@@ -17,6 +20,7 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder,VaapiVideoDecodeLinuxGL');
 
 const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'apps.json'), 'utf8'));
+const settings = { deviceName: 'Smart TV', remotePort: 8765, airplayArgs: [], ...config.settings };
 
 // User-agent de Chrome "puro" (sem "Electron/..."), senão Netflix/Disney+ bloqueiam.
 function desktopUA() {
@@ -39,6 +43,8 @@ function userAgentFor(appDef) {
 let win = null;
 const running = new Map(); // id -> WebContentsView
 let current = null;        // id do app em primeiro plano
+let airplay = null;
+let remoteUrl = null;
 
 function createLauncher() {
   win = new BrowserWindow({
@@ -80,9 +86,21 @@ function isBackKey(input) {
   return ['Escape', 'BrowserBack', 'GoBack'].includes(input.key);
 }
 
+function goBack(appDef, wc) {
+  if (wc.navigationHistory.canGoBack()) wc.navigationHistory.goBack();
+  else goHome();
+}
+
 function launch(id) {
   const appDef = config.apps.find((a) => a.id === id);
   if (!appDef) return;
+  if (appDef.type === 'airplay') {
+    // Não é uma janela: mostra no launcher como espelhar a tela do iPhone.
+    win.webContents.send('show-airplay', systemInfo());
+    return;
+  }
+  // Abrir outro app pelo controle do iPhone enquanto um já está aberto.
+  if (current && current !== id) goHome();
 
   let view = running.get(id);
   if (!view) {
@@ -103,8 +121,7 @@ function launch(id) {
       } else if (isBackKey(input) && !appDef.tvUi) {
         // Apps de TV (YouTube) tratam o Voltar sozinhos.
         event.preventDefault();
-        if (wc.navigationHistory.canGoBack()) wc.navigationHistory.goBack();
-        else goHome();
+        goBack(appDef, wc);
       }
     });
 
@@ -155,6 +172,59 @@ function goHome() {
   win.webContents.send('app-state', { current: null, background: [...running.keys()] });
 }
 
+function systemInfo() {
+  return { deviceName: settings.deviceName, remoteUrl, airplay: Boolean(airplay?.available) };
+}
+
+// Teclas vindas do controle remoto do iPhone.
+const REMOTE_KEYS = {
+  up: 'Up', down: 'Down', left: 'Left', right: 'Right', ok: 'Enter',
+  playpause: 'MediaPlayPause', backspace: 'Backspace',
+};
+
+function remoteKey(key) {
+  const appDef = config.apps.find((a) => a.id === current);
+  const wc = current ? running.get(current).webContents : win.webContents;
+  if (key === 'home') return goHome();
+  if (key === 'back') {
+    if (!appDef) return win.webContents.send('remote-back');
+    if (!appDef.tvUi) return goBack(appDef, wc);
+    key = 'escape';
+  }
+  const keyCode = REMOTE_KEYS[key] || (key === 'escape' ? 'Escape' : null);
+  if (!keyCode) return;
+  wc.sendInputEvent({ type: 'keyDown', keyCode });
+  if (keyCode === 'Enter') wc.sendInputEvent({ type: 'char', keyCode: '\r' });
+  wc.sendInputEvent({ type: 'keyUp', keyCode });
+}
+
+function remoteText(text) {
+  const wc = current ? running.get(current).webContents : win.webContents;
+  wc.insertText(text);
+}
+
+function setVolume(action) {
+  if (process.platform !== 'linux') return;
+  const args = {
+    up: ['set-sink-volume', '@DEFAULT_SINK@', '+5%'],
+    down: ['set-sink-volume', '@DEFAULT_SINK@', '-5%'],
+    mute: ['set-sink-mute', '@DEFAULT_SINK@', 'toggle'],
+  }[action];
+  if (args) execFile('pactl', args, () => {});
+}
+
+// PIN do controle remoto: gerado uma vez e guardado, para o atalho no iPhone continuar valendo.
+function remotePin() {
+  const file = path.join(app.getPath('userData'), 'remote-pin.txt');
+  try { return fs.readFileSync(file, 'utf8').trim(); } catch {}
+  const pin = String(crypto.randomInt(1000, 10000));
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, pin);
+  return pin;
+}
+
+ipcMain.handle('system:info', () => systemInfo());
+
 ipcMain.handle('apps:list', () =>
   config.apps.map((a) => ({
     ...a,
@@ -184,6 +254,21 @@ app.whenReady().then(async () => {
     }
   }
   createLauncher();
+
+  airplay = startAirPlay({ name: settings.deviceName, args: settings.airplayArgs });
+  remoteUrl = startRemoteServer({
+    port: settings.remotePort,
+    pin: remotePin(),
+    handlers: {
+      key: remoteKey,
+      text: remoteText,
+      launch,
+      volume: setVolume,
+      apps: () => config.apps.map(({ id, name, color, fg, glyph }) => ({ id, name, color, fg, glyph })),
+    },
+  }).url;
+  console.log('Controle remoto no iPhone:', remoteUrl);
 });
 
+app.on('will-quit', () => stopAirPlay(airplay));
 app.on('window-all-closed', () => app.quit());

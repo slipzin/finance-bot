@@ -8,6 +8,7 @@ let index = Number(localStorage.getItem('lastIndex') || 0);
 let zone = 'grid'; // 'grid' | 'power'
 let powerIndex = 0;
 let appOpen = false;
+const overlay = document.getElementById('overlay');
 
 function paintArt(el, app) {
   el.style.background = app.color;
@@ -70,7 +71,7 @@ function update() {
 function open() {
   const app = apps[index];
   if (!app || appOpen) return;
-  appOpen = true;
+  appOpen = app.type !== 'airplay';
   const pos = recent.indexOf(app.id);
   if (pos >= 0) recent.splice(pos, 1);
   recent.unshift(app.id);
@@ -79,9 +80,16 @@ function open() {
   window.tv.launch(app.id);
 }
 
+function closeOverlay() { overlay.hidden = true; }
+
 document.addEventListener('keydown', (e) => {
   if (appOpen) return;
   const key = e.key;
+  if (!overlay.hidden) {
+    if (['Enter', 'Escape', 'Backspace', ' '].includes(key)) closeOverlay();
+    e.preventDefault();
+    return;
+  }
   if (zone === 'power') {
     if (key === 'ArrowLeft') powerIndex = Math.max(0, powerIndex - 1);
     else if (key === 'ArrowRight') powerIndex = Math.min(powerButtons.length - 1, powerIndex + 1);
@@ -114,6 +122,25 @@ window.tv.onAppState((state) => {
   grid.querySelectorAll('.tile').forEach((t, i) =>
     t.classList.toggle('playing', playing.includes(apps[i].id)));
   update();
+});
+
+window.tv.onShowAirPlay((info) => {
+  document.getElementById('airplay-name').textContent = info.deviceName;
+  document.getElementById('airplay-off').hidden = info.airplay;
+  overlay.hidden = false;
+});
+
+window.tv.onRemoteBack(() => {
+  if (!overlay.hidden) closeOverlay();
+  else if (zone === 'power') { zone = 'grid'; update(); }
+});
+
+overlay.addEventListener('click', closeOverlay);
+
+window.tv.info().then((info) => {
+  if (info.remoteUrl) {
+    document.getElementById('remote-hint').textContent = `Controle pelo iPhone: ${info.remoteUrl}`;
+  }
 });
 
 function tick() {

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <!-- Permite "Adicionar à Tela de Início" no iPhone e abrir como app, sem Safari. -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Controle TV">
+  <meta name="theme-color" content="#000000">
+  <title>Controle TV</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background: #000; color: #fff; font-family: -apple-system, "SF Pro Text", sans-serif;
+      min-height: 100vh; padding: calc(env(safe-area-inset-top) + 16px) 20px calc(env(safe-area-inset-bottom) + 20px);
+      user-select: none; -webkit-user-select: none; display: flex; flex-direction: column; gap: 22px; }
+    h1 { font-size: 17px; font-weight: 600; text-align: center; opacity: .7; }
+    button { font: inherit; color: #fff; background: #1c1c1e; border: 0; border-radius: 50%;
+      transition: transform 80ms, background 80ms; touch-action: manipulation; }
+    button:active, button.pressed { transform: scale(.92); background: #3a3a3c; }
+
+    #pad { position: relative; width: min(78vw, 320px); aspect-ratio: 1; margin: 0 auto;
+      border-radius: 50%; background: #1c1c1e; }
+    #pad button { position: absolute; background: transparent; font-size: 26px; color: #8e8e93; }
+    #pad .up    { top: 0; left: 30%; width: 40%; height: 30%; }
+    #pad .down  { bottom: 0; left: 30%; width: 40%; height: 30%; }
+    #pad .left  { left: 0; top: 30%; width: 30%; height: 40%; }
+    #pad .right { right: 0; top: 30%; width: 30%; height: 40%; }
+    #pad .ok { left: 30%; top: 30%; width: 40%; height: 40%; background: #2c2c2e; color: #fff;
+      font-size: 18px; font-weight: 600; }
+
+    .row { display: flex; justify-content: space-around; align-items: center; }
+    .round { width: 64px; height: 64px; font-size: 22px; }
+    .pill { display: flex; flex-direction: column; background: #1c1c1e; border-radius: 32px; overflow: hidden; }
+    .pill button { border-radius: 0; width: 64px; height: 56px; background: transparent; font-size: 24px; }
+
+    #type { display: flex; gap: 8px; }
+    #type input { flex: 1; font: inherit; font-size: 16px; color: #fff; background: #1c1c1e; border: 0;
+      border-radius: 12px; padding: 12px 14px; outline: none; }
+    #type button { border-radius: 12px; padding: 0 16px; background: #0a84ff; font-weight: 600; }
+
+    #apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    #apps button { aspect-ratio: 16 / 10; border-radius: 10px; font-weight: 800; font-size: 13px;
+      white-space: pre-line; line-height: 1; }
+  </style>
+</head>
+<body>
+  <h1>Smart TV</h1>
+
+  <div id="pad">
+    <button class="up" data-key="up">▲</button>
+    <button class="left" data-key="left">◀</button>
+    <button class="ok" data-key="ok">OK</button>
+    <button class="right" data-key="right">▶</button>
+    <button class="down" data-key="down">▼</button>
+  </div>
+
+  <div class="row">
+    <button class="round" data-key="back" aria-label="Voltar">‹</button>
+    <button class="round" data-key="home" aria-label="Início">⌂</button>
+    <button class="round" data-key="playpause" aria-label="Play/Pause">⏯</button>
+    <div class="pill">
+      <button data-volume="up" aria-label="Volume +">+</button>
+      <button data-volume="down" aria-label="Volume -">−</button>
+    </div>
+  </div>
+
+  <form id="type">
+    <input id="text" placeholder="Digitar na TV (buscas, senhas...)" autocomplete="off" enterkeyhint="send">
+    <button type="submit">Enviar</button>
+  </form>
+
+  <div id="apps"></div>
+
+  <script>
+    const API = location.pathname.replace(/\/$/, '') + '/api/';
+    const post = (path, body) => fetch(API + path, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    }).catch(() => {});
+
+    // Segurar uma seta repete o comando, como num controle de verdade.
+    document.querySelectorAll('[data-key]').forEach((btn) => {
+      let timer;
+      const stop = () => { clearTimeout(timer); clearInterval(timer); btn.classList.remove('pressed'); };
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        const key = btn.dataset.key;
+        btn.classList.add('pressed');
+        post('key', { key });
+        if (['up', 'down', 'left', 'right'].includes(key)) {
+          timer = setTimeout(() => { timer = setInterval(() => post('key', { key }), 120); }, 400);
+        }
+      });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => btn.addEventListener(ev, stop));
+    });
+
+    document.querySelectorAll('[data-volume]').forEach((btn) =>
+      btn.addEventListener('click', () => post('volume', { action: btn.dataset.volume })));
+
+    document.getElementById('type').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('text');
+      if (input.value) post('text', { text: input.value });
+      input.value = '';
+    });
+
+    fetch(API + 'apps').then((r) => r.json()).then((apps) => {
+      const box = document.getElementById('apps');
+      for (const app of apps) {
+        const b = document.createElement('button');
+        b.textContent = app.glyph || app.name;
+        b.title = app.name;
+        b.style.background = app.color;
+        b.style.color = app.fg || '#fff';
+        b.addEventListener('click', () => post('launch', { id: app.id }));
+        box.append(b);
+      }
+    });
+  </script>
+</body>
+</html>

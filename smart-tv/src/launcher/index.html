@@ -23,6 +23,20 @@
     <div id="hero-chips"></div>
   </section>
   <main id="grid"></main>
+  <div id="overlay" hidden>
+    <div class="panel">
+      <h2>Espelhar tela</h2>
+      <ol id="airplay-steps">
+        <li>Conecte o iPhone/iPad/Mac na mesma rede Wi-Fi da TV.</li>
+        <li>Abra a <b>Central de Controle</b> e toque em <b>Espelhar Tela</b>.</li>
+        <li>Escolha <b id="airplay-name">Smart TV</b>.</li>
+      </ol>
+      <p class="muted">Vídeos e músicas: toque no ícone do AirPlay dentro do app (Fotos, Apple Music, Safari...).</p>
+      <p id="airplay-off" class="warn" hidden>Receptor AirPlay não instalado. Rode <code>scripts/install-linux.sh</code>.</p>
+      <p class="muted">OK ou Voltar para fechar</p>
+    </div>
+  </div>
+  <div id="remote-hint"></div>
   <div id="hint">← ↑ → ↓ navegar · OK abrir · Home volta ao início</div>
   <script src="launcher.js"></script>
 </body>

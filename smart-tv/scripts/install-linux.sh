@@ -14,6 +14,17 @@ if [ ! -x "$ELECTRON" ]; then
   exit 1
 fi
 
+# AirPlay (espelhar iPhone/iPad/Mac): receptor UxPlay + Bonjour (avahi) + codecs de vídeo.
+if command -v apt-get >/dev/null; then
+  sudo apt-get install -y uxplay avahi-daemon gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-vaapi pulseaudio-utils
+  sudo systemctl enable --now avahi-daemon
+  if command -v ufw >/dev/null && sudo ufw status | grep -q active; then
+    # Portas fixas do UxPlay (-p) e do controle remoto do iPhone.
+    sudo ufw allow 7000:7001/tcp && sudo ufw allow 7100/tcp && sudo ufw allow 6000:6001/udp && sudo ufw allow 7011/udp
+    sudo ufw allow 5353/udp && sudo ufw allow 8765/tcp
+  fi
+fi
+
 if [ "${1:-}" != "--kiosk" ]; then
   mkdir -p "$HOME/.config/autostart"
   cat > "$HOME/.config/autostart/smart-tv.desktop" <<DESK

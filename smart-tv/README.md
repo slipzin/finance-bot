@@ -6,6 +6,28 @@ sem aba, sem barra de endereço, controlado só pelo teclado ou controle remoto.
 
 ![Launcher](docs/launcher-youtube.png)
 
+**Sistema recomendado:** Linux (Debian/Ubuntu) + este launcher em modo kiosk (`install-linux.sh --kiosk`).
+O PC liga direto na TV, nunca mostra área de trabalho, e você controla tudo (visual, apps, teclas) pelo código.
+
+## Integração com iPhone, iPad e Mac
+
+| Recurso | Como usar |
+|---|---|
+| **AirPlay: espelhar tela** | Central de Controle → Espelhar Tela → **Smart TV** (ou o bloco "Espelhar tela" no launcher mostra o passo a passo) |
+| **AirPlay: vídeos, fotos e músicas** | Ícone do AirPlay dentro do app (Fotos, Apple Music, Safari, YouTube...) |
+| **iPhone como controle remoto** | Abra no Safari o endereço que aparece no topo da TV (ex.: `http://192.168.0.10:8765/4821`) → Compartilhar → **Adicionar à Tela de Início**. Vira um app com setas, OK, Voltar, Home, play/pause, volume, atalhos para os apps e **teclado do iPhone para digitar buscas e senhas** |
+| **AirPods** | Pareie pelo Bluetooth do Linux (som da TV vai para os AirPods) |
+
+O AirPlay usa o [UxPlay](https://github.com/FDH2/UxPlay) (receptor AirPlay de código aberto), instalado
+pelo `install-linux.sh`. O nome que aparece no iPhone é o `settings.deviceName` do `apps.json`.
+Conteúdo com DRM (Netflix, Apple TV+, Disney+) **não** pode ser enviado por AirPlay para receptores
+que não são da Apple; para esses, use o app correspondente direto na TV.
+
+O controle remoto só funciona na mesma rede Wi-Fi e exige o PIN que aparece na TV
+(fica salvo, então o atalho na Tela de Início continua funcionando).
+
+![AirPlay](docs/launcher-airplay.png) <img src="docs/remote-iphone.png" width="200" alt="Controle no iPhone">
+
 ## O que muda em relação a abrir no navegador
 
 | Antes (navegador) | Agora (app) |
@@ -74,5 +96,7 @@ e adicione `"icon": "netflix.png"` ao app. Campos:
 - **DRM**: no Linux a Netflix limita a 720p (é assim também no Chrome). No Windows, para 1080p+
   é preciso assinar o app com o serviço gratuito EVS da castLabs
   (`pip install castlabs-evs && python -m castlabs_evs.vmp sign-pkg dist/win-unpacked`).
+- O volume pelo controle do iPhone e o AirPlay funcionam no Linux; no Windows o launcher roda, mas
+  sem essas duas funções.
 - Se quiser **apps Android de verdade** (APKs da Play Store), a alternativa é instalar um sistema
   Android TV x86 (ex.: Bliss OS) no PC, em vez deste launcher.

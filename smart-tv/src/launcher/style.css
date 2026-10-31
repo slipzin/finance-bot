@@ -49,3 +49,15 @@ header { z-index: 1; position: fixed; top: 3vh; right: 4vw; display: flex; gap: 
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
 
 #hint { z-index: 1; position: fixed; bottom: 1.5vh; width: 100%; text-align: center; font-size: .85vw; opacity: .55; }
+
+#remote-hint { z-index: 1; position: fixed; top: 3vh; left: 50%; transform: translateX(-50%); font-size: .9vw;
+  padding: .4vw 1.1vw; border-radius: 99px; background: rgba(0,0,0,.25); opacity: .85; }
+#remote-hint:empty { display: none; }
+#overlay { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(12px); }
+#overlay[hidden] { display: none; }
+#overlay .panel { width: 46vw; padding: 3vw; border-radius: 1.5vw; background: rgba(30,30,35,.92); font-size: 1.3vw; }
+#overlay h2 { font-size: 2.6vw; margin-bottom: 1.5vw; }
+#overlay ol { padding-left: 1.6vw; display: grid; gap: .8vw; margin-bottom: 1.5vw; }
+#overlay .muted { opacity: .7; font-size: 1.05vw; margin-top: .8vw; }
+#overlay .warn { color: #ffcc00; margin-top: .8vw; }
