@@ -4,7 +4,7 @@ systemd-sysv dbus-user-session polkitd ca-certificates curl
 
 # Vídeo (X11 mínimo + drivers e decodificação por hardware)
 xserver-xorg-core xserver-xorg-video-all xserver-xorg-input-all xserver-xorg-legacy
-xinit xauth x11-xserver-utils matchbox-window-manager xdotool
+xinit xauth x11-xserver-utils matchbox-window-manager xdotool xterm
 libgl1-mesa-dri libegl1 libgl1 fontconfig
 mesa-va-drivers mesa-vulkan-drivers intel-media-va-driver-non-free i965-va-driver va-driver-all
 

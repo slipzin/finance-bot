@@ -40,6 +40,17 @@ A imagem já liga com a opção `persistence`, então ela usa essa partição/ar
 No menu do pendrive, aperte `Tab` (ou `e`) e adicione ao fim da linha, por exemplo,
 `keyboard-layouts=br` (teclado ABNT2) ou `timezone=Europe/Lisbon`.
 
+### Se a tela ficar preta no pendrive
+
+Repare **em que momento** ela fica preta, porque cada caso tem uma causa diferente:
+
+| O que aparece | O que significa | O que fazer |
+|---|---|---|
+| Preto logo depois de escolher a opção no menu do pendrive, sem nenhum texto | O vídeo não iniciou (comum com placas **NVIDIA**) | No menu do pendrive, escolha a opção **fail-safe**; ou aperte `Tab`/`e` e adicione `nomodeset` ao fim da linha |
+| Muito texto passando e depois preto | O vídeo funciona, mas a tela da TV não abriu | Aperte `Ctrl+Alt+F2`, entre com usuário `tv` e senha `live`, rode `tail -n 40 ~/smart-tv.log ~/xorg-start.log` e mande uma foto |
+| Fundo **roxo** parado | A parte gráfica abriu, mas o app da TV está demorando ou falhando | Espere 1 minuto; se não abrir, aparece uma tela com o erro: mande uma foto |
+| Terminal com "A Smart TV fechou…" | A TV fechou ou não conseguiu abrir | Mande uma foto; `startx` tenta de novo |
+
 ### Atualizar
 
 Baixe a imagem mais nova e grave de novo (com Ventoy, basta trocar o arquivo `.iso`).
@@ -90,8 +101,5 @@ Baixe a imagem mais nova e grave de novo (com Ventoy, basta trocar o arquivo `.i
 - **Tela preta ao ligar no modo TV:** `Ctrl+Alt+F2`, faça login e rode
   `cat ~/.local/share/xorg/Xorg.0.log | tail` para ver o erro; para voltar à área de trabalho:
   `sudo systemctl set-default graphical.target && sudo rm /etc/systemd/system/getty@tty1.service.d/autologin.conf && sudo reboot`.
-- **"Sair" no menu da TV** vai para o terminal; `rm /tmp/smart-tv-stop && startx` volta para a TV
-  (ou simplesmente reinicie).
-- **Pendrive não liga direto na TV:** no menu do pendrive escolha a primeira opção; se a tela
-  ficar preta, tente a opção *failsafe* e me mande uma foto da tela.
+- **"Sair" no menu da TV** vai para o terminal; `startx` volta para a TV (ou simplesmente reinicie).
 - **Windows sumiu do menu de boot:** rode `sudo update-grub` e depois `./scripts/install-linux.sh --kiosk`.

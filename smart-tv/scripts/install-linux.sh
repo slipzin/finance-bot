@@ -130,12 +130,9 @@ ExecStart=
 ExecStart=-/sbin/agetty --autologin $USER_NAME --noclear %I \$TERM
 UNIT
 install -m 0755 "$APP_DIR/scripts/xinitrc" "$USER_HOME/.xinitrc"
-PROFILE_LINE='[ -z "$DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ ! -e /tmp/smart-tv-stop ] && exec startx -- -nocursor'
 touch "$USER_HOME/.bash_profile"
-grep -qF 'smart-tv-stop' "$USER_HOME/.bash_profile" || {
-  echo '# Smart TV: liga direto na TV no tty1' >> "$USER_HOME/.bash_profile"
-  echo "$PROFILE_LINE" >> "$USER_HOME/.bash_profile"
-}
+sed -i '/smart-tv/d' "$USER_HOME/.bash_profile"
+cat "$APP_DIR/scripts/bash_profile" >> "$USER_HOME/.bash_profile"
 rm -f "$USER_HOME/.config/autostart/smart-tv.desktop"
 sudo systemctl set-default multi-user.target
 sudo systemctl disable display-manager.service 2>/dev/null || true

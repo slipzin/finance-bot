@@ -407,17 +407,7 @@ function startBackgroundServices() {
   console.log('Controle remoto no iPhone:', remoteUrl);
 }
 
-app.whenReady().then(async () => {
-  // Electron da castLabs: baixa/ativa o Widevine (DRM) usado por Netflix, Disney+, Prime etc.
-  if (components) {
-    try {
-      await components.whenReady();
-      console.log('Widevine pronto:', components.status());
-    } catch (err) {
-      console.error('Widevine indisponível, apps com DRM não vão reproduzir:', err);
-    }
-  }
-
+app.whenReady().then(() => {
   store = new Store({
     catalog: config.catalog,
     file: path.join(app.getPath('userData'), 'installed.json'),
@@ -427,8 +417,17 @@ app.whenReady().then(async () => {
     console.warn('xdotool não encontrado: o controle do iPhone não funciona dentro de apps nativos.');
   }
 
+  // A tela abre primeiro: no pendrive, o primeiro boot pode estar sem internet.
   createLauncher();
   startBackgroundServices();
+
+  // Electron da castLabs: baixa/ativa o Widevine (DRM) de Netflix, Disney+, Prime etc.
+  // em segundo plano; os apps com DRM passam a tocar assim que ele fica pronto.
+  if (components) {
+    components.whenReady()
+      .then(() => console.log('Widevine pronto:', components.status()))
+      .catch((err) => console.error('Widevine indisponível, apps com DRM não vão reproduzir:', err));
+  }
 });
 
 app.on('will-quit', () => {

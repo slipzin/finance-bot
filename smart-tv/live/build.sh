@@ -30,7 +30,7 @@ lb config \
   --memtest none \
   --iso-volume SMART_TV \
   --iso-application "Smart TV" \
-  --bootappend-live "boot=live components quiet loglevel=3 username=tv hostname=smart-tv locales=pt_BR.UTF-8 timezone=America/Sao_Paulo persistence"
+  --bootappend-live "boot=live components username=tv hostname=smart-tv locales=pt_BR.UTF-8 timezone=America/Sao_Paulo persistence"
 
 # Pacotes: só o necessário para a TV (sem área de trabalho).
 cp "$HERE/packages.list" config/package-lists/smart-tv.list.chroot
@@ -55,10 +55,7 @@ ls -la "$STAGE/node_modules/electron/dist" | head
 # Usuário "tv" (criado pelo live-config no boot) entra sozinho e abre a TV.
 mkdir -p config/includes.chroot/etc/skel config/includes.chroot/etc/systemd/system/getty@tty1.service.d
 install -m 0755 "$APP/scripts/xinitrc" config/includes.chroot/etc/skel/.xinitrc
-cat > config/includes.chroot/etc/skel/.bash_profile <<'PROFILE'
-# Smart TV: liga direto na TV no tty1
-[ -z "$DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ ! -e /tmp/smart-tv-stop ] && exec startx -- -nocursor
-PROFILE
+cp "$APP/scripts/bash_profile" config/includes.chroot/etc/skel/.bash_profile
 cat > config/includes.chroot/etc/systemd/system/getty@tty1.service.d/autologin.conf <<'UNIT'
 [Service]
 ExecStart=

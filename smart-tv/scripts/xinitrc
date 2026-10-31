@@ -2,16 +2,30 @@
 # Sessão gráfica mínima da Smart TV (modo kiosk): sem área de trabalho.
 # matchbox deixa toda janela em tela cheia (launcher, apps nativos, AirPlay).
 
+LOG="$HOME/smart-tv.log"
 xset s off s noblank -dpms
+# Fundo roxo: se aparecer, o vídeo funciona e só falta o app abrir.
+xsetroot -solid '#2a0b2e'
 matchbox-window-manager -use_titlebar no -use_cursor no &
 
 cd /opt/smart-tv
+fails=0
 while true; do
-  ./node_modules/.bin/electron .
-  # "Sair" no menu (saída normal) vai para o terminal; travamento reabre a TV.
-  if [ $? -eq 0 ]; then
-    touch /tmp/smart-tv-stop
-    break
+  started=$(date +%s)
+  echo "=== $(date) abrindo a Smart TV ===" >> "$LOG"
+  ./node_modules/.bin/electron . >> "$LOG" 2>&1
+  code=$?
+  echo "=== saiu com código $code ===" >> "$LOG"
+  # "Sair" no menu (saída normal) vai para o terminal.
+  [ "$code" -eq 0 ] && break
+
+  if [ $(( $(date +%s) - started )) -lt 30 ]; then fails=$((fails + 1)); else fails=0; fi
+  if [ "$fails" -ge 3 ]; then
+    # Falhou várias vezes seguidas: mostra o erro em vez de deixar a tela preta.
+    xterm -fa Monospace -fs 13 -bg black -fg white -e sh -c \
+      "echo 'A Smart TV não conseguiu abrir. Tire uma foto desta tela e mande para o suporte.'; echo; \
+       tail -n 45 '$LOG'; echo; echo 'Enter tenta de novo.'; read x"
+    fails=0
   fi
   sleep 2
 done

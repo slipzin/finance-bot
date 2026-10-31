@@ -1,0 +1,7 @@
+# smart-tv: abre a TV uma vez por boot no tty1. Se ela fechar ou falhar, fica no
+# terminal com instruções em vez de uma tela preta.
+if [ -z "$DISPLAY" ] && [ "$(tty)" = /dev/tty1 ] && [ ! -e /tmp/smart-tv-started ]; then # smart-tv
+  touch /tmp/smart-tv-started # smart-tv
+  startx -- -nocursor > "$HOME/xorg-start.log" 2>&1 # smart-tv
+  echo "A Smart TV fechou. Abrir de novo: startx   |   Erros: tail ~/smart-tv.log ~/xorg-start.log" # smart-tv
+fi # smart-tv
