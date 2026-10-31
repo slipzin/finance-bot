@@ -1,0 +1,14 @@
+{
+  "_doc": "Lista de apps do launcher. Campos: id, name, subtitle, url, color (fundo do bloco), accent (cor do hero), icon (opcional, arquivo em icons/), userAgent ('tv' = interface de TV, 'desktop' = Chrome normal, ou uma string), tvUi (true se o app ja trata o controle remoto sozinho), background (true = continua tocando quando volta para o inicio).",
+  "apps": [
+    { "id": "youtube",   "name": "YouTube",       "subtitle": "Vídeos, música e ao vivo", "url": "https://www.youtube.com/tv",            "color": "#ffffff", "fg": "#ff0033", "accent": "#c4122f", "glyph": "▶",  "userAgent": "tv",      "tvUi": true },
+    { "id": "spotify",   "name": "Spotify",       "subtitle": "Música e podcasts",        "url": "https://open.spotify.com",              "color": "#1ed760", "fg": "#000000", "accent": "#1db954", "glyph": "♫",  "userAgent": "desktop", "background": true },
+    { "id": "netflix",   "name": "Netflix",       "subtitle": "Filmes e séries",          "url": "https://www.netflix.com/browse",        "color": "#141414", "fg": "#e50914", "accent": "#8b0a10", "glyph": "N",  "userAgent": "desktop" },
+    { "id": "prime",     "name": "Prime Video",   "subtitle": "Filmes, séries e esportes", "url": "https://www.primevideo.com",           "color": "#1a98ff", "fg": "#ffffff", "accent": "#0f5ea8", "glyph": "prime", "userAgent": "desktop" },
+    { "id": "disney",    "name": "Disney+",       "subtitle": "Disney, Pixar, Marvel e Star Wars", "url": "https://www.disneyplus.com",  "color": "#0f6fd6", "fg": "#ffffff", "accent": "#0b3d91", "glyph": "D+", "userAgent": "desktop" },
+    { "id": "globoplay", "name": "Globoplay",     "subtitle": "Novelas, séries e ao vivo", "url": "https://globoplay.globo.com",          "color": "#ffffff", "fg": "#ff2d55", "accent": "#d9214a", "glyph": "globo\nplay", "userAgent": "desktop" },
+    { "id": "twitch",    "name": "Twitch",        "subtitle": "Lives e games",            "url": "https://www.twitch.tv",                 "color": "#9146ff", "fg": "#ffffff", "accent": "#5c2bb0", "glyph": "⌘",  "userAgent": "desktop" },
+    { "id": "appletv",   "name": "Apple TV",      "subtitle": "Originais Apple",          "url": "https://tv.apple.com",                  "color": "#f2f2f2", "fg": "#1d1d1f", "accent": "#3a3a3c", "glyph": "tv", "userAgent": "desktop" },
+    { "id": "applemusic","name": "Apple Music",   "subtitle": "Músicas e playlists",      "url": "https://music.apple.com",               "color": "#ffffff", "fg": "#fa2d48", "accent": "#c21d36", "glyph": "♪",  "userAgent": "desktop", "background": true }
+  ]
+}
