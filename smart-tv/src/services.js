@@ -1,6 +1,5 @@
-// Receptor AirPlay (espelhamento de tela e áudio do iPhone/iPad/Mac) via UxPlay.
-// O UxPlay fica escutando em segundo plano; quando o iPhone conecta, ele abre
-// o vídeo em tela cheia por cima do launcher.
+// Serviços em segundo plano da TV (receptor AirPlay, Spotify Connect...).
+// Cada um é um programa externo mantido vivo: se cair, é reiniciado.
 
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -17,11 +16,11 @@ function findBinary(name) {
   return null;
 }
 
-function startAirPlay({ name, args = [] }) {
-  const bin = findBinary('uxplay');
-  const state = { available: Boolean(bin), name, child: null, stopped: false };
-  if (!bin) {
-    console.warn('UxPlay não encontrado: AirPlay desativado (veja o README).');
+function startService({ label, bin, args = [] }) {
+  const exe = findBinary(bin);
+  const state = { label, available: Boolean(exe), child: null, stopped: false };
+  if (!exe) {
+    console.warn(`${label}: "${bin}" não encontrado, desativado (rode scripts/install-linux.sh).`);
     return state;
   }
 
@@ -29,7 +28,8 @@ function startAirPlay({ name, args = [] }) {
   const run = () => {
     if (state.stopped) return;
     const startedAt = Date.now();
-    state.child = spawn(bin, ['-n', name, '-nh', ...args], { stdio: 'inherit' });
+    state.child = spawn(exe, args, { stdio: 'inherit' });
+    state.child.on('error', (err) => console.error(`${label}:`, err.message));
     state.child.on('exit', () => {
       state.child = null;
       // Reinicia se cair; espera mais se estiver caindo em sequência.
@@ -41,10 +41,10 @@ function startAirPlay({ name, args = [] }) {
   return state;
 }
 
-function stopAirPlay(state) {
+function stopService(state) {
   if (!state) return;
   state.stopped = true;
   state.child?.kill();
 }
 
-module.exports = { startAirPlay, stopAirPlay };
+module.exports = { findBinary, startService, stopService };

@@ -1,6 +1,10 @@
 // Controle remoto pelo iPhone/iPad: servidor HTTP na rede local que entrega uma
-// página (instalável na Tela de Início do iOS) com setas, OK, Voltar, Home,
-// volume e teclado. Protegido por um PIN mostrado na TV.
+// página (instalável na Tela de Início do iOS) e a API usada por ela e pelo atalho
+// "Enviar para TV". Protegido por um PIN mostrado na TV.
+//
+//   GET  /<pin>               página do controle
+//   GET  /<pin>/api/<nome>    handlers.get[nome]()      -> JSON
+//   POST /<pin>/api/<nome>    handlers.post[nome](body) -> JSON (opcional)
 
 const http = require('http');
 const os = require('os');
@@ -22,8 +26,16 @@ function readBody(req) {
   return new Promise((resolve) => {
     let data = '';
     req.on('data', (chunk) => { data += chunk; if (data.length > 1e5) req.destroy(); });
-    req.on('end', () => { try { resolve(JSON.parse(data || '{}')); } catch { resolve({}); } });
+    req.on('end', () => {
+      try { resolve(JSON.parse(data || '{}')); } catch { resolve({ text: data }); }
+    });
   });
+}
+
+function sendJson(res, value) {
+  if (value === undefined) { res.writeHead(204); return res.end(); }
+  res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify(value));
 }
 
 function startRemoteServer({ port, pin, handlers }) {
@@ -40,22 +52,20 @@ function startRemoteServer({ port, pin, handlers }) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       return fs.createReadStream(PAGE).pipe(res);
     }
-    if (req.method === 'GET' && route === 'api/apps') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify(handlers.apps()));
+
+    const name = route.startsWith('api/') ? route.slice(4) : null;
+    const table = req.method === 'GET' ? handlers.get : req.method === 'POST' ? handlers.post : null;
+    const handler = name && table && Object.hasOwn(table, name) ? table[name] : null;
+    if (!handler) { res.writeHead(404); return res.end(); }
+
+    try {
+      const body = req.method === 'POST' ? await readBody(req) : undefined;
+      sendJson(res, await handler(body || {}));
+    } catch (err) {
+      console.error('Controle remoto:', err);
+      res.writeHead(500);
+      res.end();
     }
-    if (req.method === 'POST' && route.startsWith('api/')) {
-      const body = await readBody(req);
-      const action = route.slice(4);
-      if (action === 'key' && typeof body.key === 'string') handlers.key(body.key);
-      else if (action === 'text' && typeof body.text === 'string') handlers.text(body.text.slice(0, 500));
-      else if (action === 'launch' && typeof body.id === 'string') handlers.launch(body.id);
-      else if (action === 'volume' && typeof body.action === 'string') handlers.volume(body.action);
-      res.writeHead(204);
-      return res.end();
-    }
-    res.writeHead(404);
-    res.end();
   });
 
   server.on('error', (err) => console.error('Controle remoto indisponível:', err.message));

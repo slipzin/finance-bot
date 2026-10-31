@@ -1,14 +1,41 @@
 const COLS = 5;
+const STORE_COLS = 6;
 const grid = document.getElementById('grid');
+const overlay = document.getElementById('overlay');
+const storeEl = document.getElementById('store');
+const storeGrid = document.getElementById('store-grid');
 const powerButtons = [...document.querySelectorAll('#power button')];
 const recent = JSON.parse(localStorage.getItem('recent') || '[]');
 
 let apps = [];
+let catalog = [];
 let index = Number(localStorage.getItem('lastIndex') || 0);
-let zone = 'grid'; // 'grid' | 'power'
+let zone = 'grid'; // 'grid' | 'power' | 'store'
 let powerIndex = 0;
+let storeIndex = 0;
+let confirmRemove = null; // { id, until }
 let appOpen = false;
-const overlay = document.getElementById('overlay');
+let playing = [];
+
+const homeRows = { first: 0 };
+const storeRows = { first: 0 };
+
+// Rolagem por fileira (como nas TVs): mantém a fileira em foco visível.
+function keepRowVisible(wrap, gridEl, idx, cols, rows) {
+  const item = gridEl.children[idx];
+  if (!item) return;
+  const gap = parseFloat(getComputedStyle(gridEl).rowGap) || 0;
+  const step = item.offsetHeight + gap;
+  const style = getComputedStyle(wrap);
+  const avail = wrap.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  const visible = Math.max(1, Math.floor((avail + gap) / step));
+  const row = Math.floor(idx / cols);
+  if (row < rows.first) rows.first = row;
+  if (row >= rows.first + visible) rows.first = row - visible + 1;
+  gridEl.style.transform = `translateY(${-rows.first * step}px)`;
+}
+
+const visiblePower = () => powerButtons.filter((b) => !b.hidden);
 
 function paintArt(el, app) {
   el.style.background = app.color;
@@ -21,12 +48,21 @@ function paintArt(el, app) {
   }
 }
 
+function toast(text) {
+  const el = document.getElementById('toast');
+  el.textContent = text;
+  el.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { el.hidden = true; }, 3000);
+}
+
+// ---------- Tela inicial ----------
+
 function render() {
   grid.innerHTML = '';
   apps.forEach((app, i) => {
     const tile = document.createElement('div');
     tile.className = 'tile';
-    tile.dataset.index = i;
     const art = document.createElement('div');
     art.className = 'tile-art';
     paintArt(art, app);
@@ -45,9 +81,13 @@ function render() {
 
 function update() {
   index = Math.max(0, Math.min(index, apps.length - 1));
-  grid.querySelectorAll('.tile').forEach((t, i) =>
-    t.classList.toggle('focused', zone === 'grid' && i === index));
-  powerButtons.forEach((b, i) => b.classList.toggle('focused', zone === 'power' && i === powerIndex));
+  grid.querySelectorAll('.tile').forEach((t, i) => {
+    t.classList.toggle('focused', zone === 'grid' && i === index);
+    t.classList.toggle('playing', playing.includes(apps[i].id));
+  });
+  const power = visiblePower();
+  powerButtons.forEach((b) => b.classList.toggle('focused', zone === 'power' && b === power[powerIndex]));
+  keepRowVisible(document.getElementById('grid-wrap'), grid, index, COLS, homeRows);
 
   const app = apps[index];
   if (!app) return;
@@ -58,7 +98,9 @@ function update() {
   const chips = document.getElementById('hero-chips');
   chips.innerHTML = '';
   const labels = [];
-  if (recent.includes(app.id)) labels.push('Usado recentemente');
+  if (playing.includes(app.id)) labels.push('Tocando');
+  else if (recent.includes(app.id)) labels.push('Usado recentemente');
+  if (app.type === 'flatpak') labels.push('App nativo');
   labels.push('OK para abrir');
   for (const text of labels) {
     const chip = document.createElement('span');
@@ -71,58 +113,163 @@ function update() {
 function open() {
   const app = apps[index];
   if (!app || appOpen) return;
-  appOpen = app.type !== 'airplay';
-  const pos = recent.indexOf(app.id);
-  if (pos >= 0) recent.splice(pos, 1);
-  recent.unshift(app.id);
-  localStorage.setItem('recent', JSON.stringify(recent.slice(0, 5)));
+  if (!app.system) {
+    appOpen = true;
+    const pos = recent.indexOf(app.id);
+    if (pos >= 0) recent.splice(pos, 1);
+    recent.unshift(app.id);
+    localStorage.setItem('recent', JSON.stringify(recent.slice(0, 5)));
+  }
   localStorage.setItem('lastIndex', String(index));
   window.tv.launch(app.id);
 }
+
+async function reloadApps() {
+  apps = await window.tv.apps();
+  render();
+}
+
+// ---------- Loja ----------
+
+function badgeFor(item) {
+  if (confirmRemove?.id === item.id && confirmRemove.until > Date.now()) return ['OK de novo para remover', 'confirm'];
+  if (item.status === 'installing') return ['Instalando…', 'busy'];
+  if (item.status === 'removing') return ['Removendo…', 'busy'];
+  if (item.status === 'error') return ['Erro — OK para tentar de novo', 'err'];
+  if (item.installed) return ['Instalado ✓', 'ok'];
+  return [item.type === 'flatpak' ? 'Instalar (nativo)' : 'Instalar', ''];
+}
+
+function renderStore() {
+  storeGrid.innerHTML = '';
+  catalog.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'store-item';
+    const art = document.createElement('div');
+    art.className = 'tile-art';
+    paintArt(art, item);
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = item.name;
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = `${item.category} · ${item.subtitle || ''}`;
+    const [text, cls] = badgeFor(item);
+    const badge = document.createElement('span');
+    badge.className = `badge ${cls}`;
+    badge.textContent = text;
+    el.append(art, name, meta, badge);
+    el.addEventListener('mouseenter', () => { storeIndex = i; updateStore(); });
+    el.addEventListener('click', () => { storeIndex = i; storeAction(); });
+    storeGrid.append(el);
+  });
+  updateStore();
+}
+
+function updateStore() {
+  storeIndex = Math.max(0, Math.min(storeIndex, catalog.length - 1));
+  storeGrid.querySelectorAll('.store-item').forEach((el, i) => el.classList.toggle('focused', i === storeIndex));
+  keepRowVisible(document.getElementById('store-wrap'), storeGrid, storeIndex, STORE_COLS, storeRows);
+}
+
+async function openStore() {
+  catalog = await window.tv.catalog();
+  zone = 'store';
+  storeEl.hidden = false;
+  renderStore();
+}
+
+function closeStore() {
+  storeEl.hidden = true;
+  zone = 'grid';
+  confirmRemove = null;
+  update();
+}
+
+function storeAction() {
+  const item = catalog[storeIndex];
+  if (!item || item.status === 'installing' || item.status === 'removing') return;
+  if (!item.installed) {
+    window.tv.install(item.id);
+    toast(`Instalando ${item.name}…`);
+  } else if (confirmRemove?.id === item.id && confirmRemove.until > Date.now()) {
+    confirmRemove = null;
+    window.tv.uninstall(item.id);
+    toast(`${item.name} removido`);
+  } else {
+    confirmRemove = { id: item.id, until: Date.now() + 3000 };
+    renderStore();
+    setTimeout(() => { if (zone === 'store') renderStore(); }, 3100);
+  }
+}
+
+// ---------- Teclado / controle ----------
 
 function closeOverlay() { overlay.hidden = true; }
 
 document.addEventListener('keydown', (e) => {
   if (appOpen) return;
   const key = e.key;
+  const isBack = ['Escape', 'Backspace', 'BrowserBack'].includes(key);
+  const isOk = key === 'Enter' || key === ' ';
+
   if (!overlay.hidden) {
-    if (['Enter', 'Escape', 'Backspace', ' '].includes(key)) closeOverlay();
-    e.preventDefault();
-    return;
-  }
-  if (zone === 'power') {
-    if (key === 'ArrowLeft') powerIndex = Math.max(0, powerIndex - 1);
-    else if (key === 'ArrowRight') powerIndex = Math.min(powerButtons.length - 1, powerIndex + 1);
-    else if (key === 'ArrowDown' || key === 'Escape') zone = 'grid';
-    else if (key === 'Enter' || key === ' ') window.tv.power(powerButtons[powerIndex].dataset.action);
+    if (isOk || isBack) closeOverlay();
+  } else if (zone === 'store') {
+    if (key === 'ArrowLeft') storeIndex -= 1;
+    else if (key === 'ArrowRight') storeIndex += 1;
+    else if (key === 'ArrowDown') storeIndex = Math.min(catalog.length - 1, storeIndex + STORE_COLS);
+    else if (key === 'ArrowUp') storeIndex = Math.max(0, storeIndex - STORE_COLS);
+    else if (isOk) storeAction();
+    else if (isBack) return closeStore();
     else return;
+    updateStore();
+  } else if (zone === 'power') {
+    const power = visiblePower();
+    if (key === 'ArrowLeft') powerIndex = Math.max(0, powerIndex - 1);
+    else if (key === 'ArrowRight') powerIndex = Math.min(power.length - 1, powerIndex + 1);
+    else if (key === 'ArrowDown' || isBack) zone = 'grid';
+    else if (isOk) window.tv.power(power[powerIndex].dataset.action);
+    else return;
+    update();
   } else {
     if (key === 'ArrowLeft') index -= 1;
     else if (key === 'ArrowRight') index += 1;
     else if (key === 'ArrowDown') index = Math.min(apps.length - 1, index + COLS);
     else if (key === 'ArrowUp') { if (index < COLS) zone = 'power'; else index -= COLS; }
-    else if (key === 'Enter' || key === ' ') return open();
+    else if (isOk) return open();
     else return;
+    update();
   }
   e.preventDefault();
   document.body.classList.remove('mouse');
-  update();
 });
 
-powerButtons.forEach((b, i) => {
-  b.addEventListener('mouseenter', () => { zone = 'power'; powerIndex = i; update(); });
+powerButtons.forEach((b) => {
+  b.addEventListener('mouseenter', () => { zone = 'power'; powerIndex = visiblePower().indexOf(b); update(); });
   b.addEventListener('click', () => window.tv.power(b.dataset.action));
 });
 
 document.addEventListener('mousemove', () => document.body.classList.add('mouse'));
+overlay.addEventListener('click', closeOverlay);
+
+// ---------- Eventos do sistema ----------
 
 window.tv.onAppState((state) => {
   appOpen = Boolean(state.current);
-  const playing = state.background || [];
-  grid.querySelectorAll('.tile').forEach((t, i) =>
-    t.classList.toggle('playing', playing.includes(apps[i].id)));
+  playing = state.background || [];
   update();
 });
+
+window.tv.onAppsChanged(async () => {
+  await reloadApps();
+  if (zone === 'store') {
+    catalog = await window.tv.catalog();
+    renderStore();
+  }
+});
+
+window.tv.onShowStore(openStore);
 
 window.tv.onShowAirPlay((info) => {
   document.getElementById('airplay-name').textContent = info.deviceName;
@@ -132,15 +279,15 @@ window.tv.onShowAirPlay((info) => {
 
 window.tv.onRemoteBack(() => {
   if (!overlay.hidden) closeOverlay();
+  else if (zone === 'store') closeStore();
   else if (zone === 'power') { zone = 'grid'; update(); }
 });
-
-overlay.addEventListener('click', closeOverlay);
 
 window.tv.info().then((info) => {
   if (info.remoteUrl) {
     document.getElementById('remote-hint').textContent = `Controle pelo iPhone: ${info.remoteUrl}`;
   }
+  document.querySelector('[data-action="windows"]').hidden = !info.windows;
 });
 
 function tick() {
@@ -150,4 +297,4 @@ function tick() {
 setInterval(tick, 10000);
 tick();
 
-window.tv.apps().then((list) => { apps = list; render(); });
+reloadApps();

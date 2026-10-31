@@ -8,7 +8,8 @@
     "start": "electron .",
     "dev": "electron . --windowed",
     "dist:linux": "electron-builder --linux AppImage deb",
-    "dist:win": "electron-builder --win nsis"
+    "dist:win": "electron-builder --win nsis",
+    "test": "node --test"
   },
   "author": "slipzin",
   "license": "MIT",
@@ -22,8 +23,21 @@
     "electronDownload": {
       "mirror": "https://github.com/castlabs/electron-releases/releases/download/v"
     },
-    "files": ["src/**/*", "apps.json", "icons/**/*"],
-    "linux": { "target": ["AppImage", "deb"], "category": "AudioVideo" },
-    "win": { "target": "nsis" }
+    "files": [
+      "src/**/*",
+      "apps.json",
+      "icons/**/*",
+      "scripts/**/*"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "AudioVideo"
+    },
+    "win": {
+      "target": "nsis"
+    }
   }
 }

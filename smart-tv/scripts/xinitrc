@@ -1,0 +1,17 @@
+#!/bin/sh
+# Sessão gráfica mínima da Smart TV (modo kiosk): sem área de trabalho.
+# matchbox deixa toda janela em tela cheia (launcher, apps nativos, AirPlay).
+
+xset s off s noblank -dpms
+matchbox-window-manager -use_titlebar no -use_cursor no &
+
+cd /opt/smart-tv
+while true; do
+  ./node_modules/.bin/electron .
+  # "Sair" no menu (saída normal) vai para o terminal; travamento reabre a TV.
+  if [ $? -eq 0 ]; then
+    touch /tmp/smart-tv-stop
+    break
+  fi
+  sleep 2
+done

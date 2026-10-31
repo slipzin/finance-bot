@@ -11,6 +11,7 @@
   <header>
     <div id="clock"></div>
     <nav id="power" aria-label="Energia">
+      <button data-action="windows" hidden>Windows</button>
       <button data-action="reboot">Reiniciar</button>
       <button data-action="shutdown">Desligar</button>
       <button data-action="quit">Sair</button>
@@ -22,7 +23,7 @@
     <p id="hero-subtitle"></p>
     <div id="hero-chips"></div>
   </section>
-  <main id="grid"></main>
+  <div id="grid-wrap"><main id="grid"></main></div>
   <div id="overlay" hidden>
     <div class="panel">
       <h2>Espelhar tela</h2>
@@ -36,6 +37,14 @@
       <p class="muted">OK ou Voltar para fechar</p>
     </div>
   </div>
+  <div id="store" hidden>
+    <div class="store-head">
+      <h2>Loja</h2>
+      <p class="muted">OK instala · OK em um app instalado (duas vezes) remove · Voltar fecha · Para adicionar qualquer site, use o controle do iPhone</p>
+    </div>
+    <div id="store-wrap"><div id="store-grid"></div></div>
+  </div>
+  <div id="toast" hidden></div>
   <div id="remote-hint"></div>
   <div id="hint">← ↑ → ↓ navegar · OK abrir · Home volta ao início</div>
   <script src="launcher.js"></script>

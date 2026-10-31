@@ -43,6 +43,31 @@
     #apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     #apps button { aspect-ratio: 16 / 10; border-radius: 10px; font-weight: 800; font-size: 13px;
       white-space: pre-line; line-height: 1; }
+
+    h2 { font-size: 15px; font-weight: 600; opacity: .6; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+    .field { display: flex; gap: 8px; }
+    .field input { flex: 1; min-width: 0; font: inherit; font-size: 16px; color: #fff; background: #1c1c1e; border: 0;
+      border-radius: 12px; padding: 12px 14px; outline: none; }
+    .field button, .small { border-radius: 12px; padding: 0 16px; background: #0a84ff; font-weight: 600; }
+    .stack { display: grid; gap: 8px; }
+    #store { display: grid; gap: 8px; }
+    .store-row { display: flex; align-items: center; gap: 12px; background: #1c1c1e; border-radius: 12px; padding: 8px; }
+    .store-row .art { width: 56px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; white-space: pre-line; line-height: 1; flex: none; text-align: center; }
+    .store-row .txt { flex: 1; min-width: 0; }
+    .store-row .txt b { display: block; font-size: 15px; }
+    .store-row .txt span { font-size: 12px; opacity: .6; }
+    .store-row button { border-radius: 10px; padding: 8px 12px; font-size: 14px; font-weight: 600; background: #0a84ff; }
+    .store-row button.remove { background: #3a3a3c; }
+    .store-row button:disabled { opacity: .5; }
+    details { background: #1c1c1e; border-radius: 12px; padding: 12px 14px; font-size: 14px; line-height: 1.45; }
+    details summary { font-weight: 600; font-size: 15px; }
+    details ol { padding-left: 20px; margin-top: 8px; display: grid; gap: 6px; }
+    code { background: #2c2c2e; padding: 1px 5px; border-radius: 5px; word-break: break-all; font-size: 13px; }
+    #status { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 16px); transform: translateX(-50%);
+      background: #2c2c2e; padding: 10px 18px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity 200ms;
+      pointer-events: none; }
+    #status.show { opacity: 1; }
   </style>
 </head>
 <body>
@@ -66,18 +91,54 @@
     </div>
   </div>
 
-  <form id="type">
+  <form id="type" class="field">
     <input id="text" placeholder="Digitar na TV (buscas, senhas...)" autocomplete="off" enterkeyhint="send">
     <button type="submit">Enviar</button>
   </form>
 
-  <div id="apps"></div>
+  <section>
+    <h2>Meus apps</h2>
+    <div id="apps"></div>
+  </section>
+
+  <section class="stack">
+    <h2>Enviar para a TV</h2>
+    <form id="link" class="field">
+      <input id="link-url" type="url" placeholder="Cole um link (Netflix, Disney+, YouTube...)" autocomplete="off">
+      <button type="submit">Abrir</button>
+    </form>
+    <details>
+      <summary>Botão "Enviar para TV" no Compartilhar do iPhone</summary>
+      <p style="margin-top:8px">Funciona em qualquer app (Netflix, Disney+, Prime, Globoplay, YouTube, Spotify...): toque em
+        <b>Compartilhar</b> no filme, série ou música e escolha <b>Enviar para TV</b>. Para criar o atalho uma vez:</p>
+      <ol>
+        <li>Abra o app <b>Atalhos</b> → <b>+</b> → renomeie para <b>Enviar para TV</b>.</li>
+        <li>Toque em <b>ⓘ</b> e ative <b>Mostrar na Folha de Compartilhamento</b> (tipos: URLs e Texto).</li>
+        <li>Adicione a ação <b>Obter Conteúdo do URL</b> com o endereço <code id="open-url"></code></li>
+        <li>Em <b>Mostrar Mais</b>: Método <b>POST</b>, Corpo da Solicitação <b>JSON</b>, campo <code>url</code> = <b>Entrada do Atalho</b>.</li>
+      </ol>
+    </details>
+  </section>
+
+  <section class="stack">
+    <h2>Loja</h2>
+    <div id="store"></div>
+    <form id="custom" class="stack">
+      <div class="field"><input id="custom-name" placeholder="Nome (opcional)" autocomplete="off"></div>
+      <div class="field">
+        <input id="custom-url" type="url" placeholder="Adicionar qualquer site: https://..." autocomplete="off">
+        <button type="submit">Adicionar</button>
+      </div>
+    </form>
+  </section>
+
+  <div id="status"></div>
 
   <script>
     const API = location.pathname.replace(/\/$/, '') + '/api/';
     const post = (path, body) => fetch(API + path, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-    }).catch(() => {});
+    }).catch(() => null);
 
     // Segurar uma seta repete o comando, como num controle de verdade.
     document.querySelectorAll('[data-key]').forEach((btn) => {
@@ -105,8 +166,50 @@
       input.value = '';
     });
 
-    fetch(API + 'apps').then((r) => r.json()).then((apps) => {
+    const status = document.getElementById('status');
+    function say(text) {
+      status.textContent = text;
+      status.classList.add('show');
+      clearTimeout(say.t);
+      say.t = setTimeout(() => status.classList.remove('show'), 2500);
+    }
+
+    document.getElementById('open-url').textContent = location.origin + API + 'open';
+
+    document.getElementById('link').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('link-url');
+      if (!input.value) return;
+      const res = await post('open', { url: input.value });
+      const data = res && res.ok ? await res.json() : null;
+      say(data && data.ok ? `Abrindo no ${data.app}` : 'Link inválido');
+      input.value = '';
+    });
+
+    document.getElementById('custom').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('custom-name');
+      const url = document.getElementById('custom-url');
+      if (!url.value) return;
+      const res = await post('custom', { name: name.value, url: url.value });
+      const data = res && res.ok ? await res.json() : null;
+      say(data && data.ok ? 'Site adicionado à TV' : 'Endereço inválido');
+      name.value = url.value = '';
+      refresh();
+    });
+
+    function art(app) {
+      const el = document.createElement('div');
+      el.className = 'art';
+      el.textContent = app.glyph || app.name;
+      el.style.background = app.color;
+      el.style.color = app.fg || '#fff';
+      return el;
+    }
+
+    function renderApps(apps) {
       const box = document.getElementById('apps');
+      box.innerHTML = '';
       for (const app of apps) {
         const b = document.createElement('button');
         b.textContent = app.glyph || app.name;
@@ -116,7 +219,50 @@
         b.addEventListener('click', () => post('launch', { id: app.id }));
         box.append(b);
       }
-    });
+    }
+
+    function renderStore(items) {
+      const box = document.getElementById('store');
+      box.innerHTML = '';
+      for (const item of items) {
+        const row = document.createElement('div');
+        row.className = 'store-row';
+        const txt = document.createElement('div');
+        txt.className = 'txt';
+        const name = document.createElement('b');
+        name.textContent = item.name;
+        const meta = document.createElement('span');
+        meta.textContent = `${item.category}${item.type === 'flatpak' ? ' · nativo' : ''} · ${item.subtitle || ''}`;
+        txt.append(name, meta);
+        const btn = document.createElement('button');
+        if (item.status === 'installing') { btn.textContent = 'Instalando…'; btn.disabled = true; }
+        else if (item.status === 'removing') { btn.textContent = 'Removendo…'; btn.disabled = true; }
+        else if (item.installed) { btn.textContent = 'Remover'; btn.className = 'remove'; }
+        else btn.textContent = item.status === 'error' ? 'Tentar de novo' : 'Instalar';
+        btn.addEventListener('click', async () => {
+          if (item.installed && !confirm(`Remover ${item.name} da TV?`)) return;
+          await post(item.installed ? 'uninstall' : 'install', { id: item.id });
+          say(item.installed ? `${item.name} removido` : `Instalando ${item.name}…`);
+          refresh();
+        });
+        row.append(art(item), txt, btn);
+        box.append(row);
+      }
+    }
+
+    async function refresh() {
+      try {
+        const [apps, items] = await Promise.all([
+          fetch(API + 'apps').then((r) => r.json()),
+          fetch(API + 'catalog').then((r) => r.json()),
+        ]);
+        renderApps(apps);
+        renderStore(items);
+      } catch {}
+    }
+    refresh();
+    // Atualiza o progresso de instalação de apps nativos.
+    setInterval(() => { if (!document.hidden) refresh(); }, 4000);
   </script>
 </body>
 </html>
